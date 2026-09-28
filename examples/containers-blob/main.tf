@@ -1,0 +1,58 @@
+module "naming" {
+  source  = "cloudnationhq/naming/azure"
+  version = "~> 0.26"
+
+  suffix = ["demo", "dev"]
+}
+
+module "rg" {
+  source  = "cloudnationhq/rg/azure"
+  version = "~> 3.0"
+
+  groups = {
+    demo = {
+      name     = module.naming.resource_group.name_unique
+      location = "westeurope"
+    }
+  }
+}
+
+module "storage" {
+  source  = "cloudnationhq/sa/azure"
+  version = "~> 5.0"
+
+  storage = {
+    name                = module.naming.storage_account.name_unique
+    location            = module.rg.groups.demo.location
+    resource_group_name = module.rg.groups.demo.name
+
+    blob_properties = {
+      versioning_enabled       = true
+      last_access_time_enabled = true
+      change_feed_enabled      = true
+
+      delete_retention_policy = {
+        days                     = 10
+        permanent_delete_enabled = false
+      }
+
+      container_delete_retention_policy = {
+        days = 10
+      }
+
+      containers = {
+        sc1 = {
+          metadata = {
+            project = "marketing"
+            owner   = "marketing team"
+          }
+          immutability_policy = {
+            immutability_period_in_days         = 30
+            protected_append_writes_enabled     = true
+            protected_append_writes_all_enabled = false
+          }
+        }
+      }
+    }
+  }
+}
